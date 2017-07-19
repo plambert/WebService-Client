@@ -1,7 +1,7 @@
 package WebService::Client;
 use Moo::Role;
 
-# VERSION
+our $VERSION = '0.0601'; # VERSION
 
 use Carp qw(croak);
 use HTTP::Request;
@@ -79,6 +79,8 @@ has json => (
     default => sub { JSON::MaybeXS->new() },
 );
 
+has response_filter => ( is => 'ro' );
+
 sub get {
     my ($self, $path, $params, %args) = @_;
     $params ||= {};
@@ -143,12 +145,14 @@ sub req {
     $self->_log_request($req);
     my $res = $self->ua->request($req);
     $self->_log_response($res);
+    $res = $self->response_filter->($res) if ($self->response_filter);
 
     my $retries = $self->retries;
     while ($res->code =~ /^5/ and $retries--) {
         sleep 1;
         $res = $self->ua->request($req);
         $self->_log_response($res);
+        $res = $self->response_filter->($res) if ($self->response_filter);
     }
 
     return if $req->method eq 'GET' and $res->code =~ /404|410/;
@@ -229,6 +233,23 @@ sub _content {
 }
 
 # ABSTRACT: A base role for quickly and easily creating web service clients
+
+
+1;
+
+__END__
+
+=pod
+
+=encoding UTF-8
+
+=head1 NAME
+
+WebService::Client - A base role for quickly and easily creating web service clients
+
+=head1 VERSION
+
+version 0.0601
 
 =head1 SYNOPSIS
 
@@ -494,6 +515,15 @@ Todd Wade <L<https://github.com/trwww>>
 
 =back
 
-=cut
+=head1 AUTHOR
 
-1;
+Naveed Massjouni <naveed@vt.edu>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2014 by Naveed Massjouni.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
+=cut
